@@ -8,6 +8,8 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
 import os
+import time
+import mlflow
 
 app = FastAPI()
 
@@ -50,6 +52,8 @@ chain = (
 class QuestionRequest(BaseModel):
     question: str
 
+mlflow.set_experiment("rag-pipeline")
+
 @app.get("/")
 def root():
     return {"status": "RAG API is running"}
@@ -58,5 +62,21 @@ def root():
 def ask_question(request: QuestionRequest):
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
-    answer = chain.invoke(request.question)
+
+    with mlflow.start_run():
+        # Log inputs
+        mlflow.log_param("model", "llama-3.3-70b-versatile")
+        mlflow.log_param("top_k", 3)
+        mlflow.log_param("embedding_model", "all-MiniLM-L6-v2")
+        mlflow.log_param("question", request.question)
+
+        # Measure latency
+        start = time.time()
+        answer = chain.invoke(request.question)
+        latency = time.time() - start
+
+        # Log metrics
+        mlflow.log_metric("response_latency_sec", latency)
+        mlflow.log_metric("answer_length_chars", len(answer))
+
     return {"question": request.question, "answer": answer}
