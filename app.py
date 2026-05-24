@@ -6,12 +6,22 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.documents import Document
 import os
 
 app = FastAPI()
 
+# Sample documents to build index from
+docs = [
+    Document(page_content="MLOps is the practice of deploying and maintaining ML models in production."),
+    Document(page_content="FastAPI is a modern web framework for building APIs with Python."),
+    Document(page_content="Docker packages applications and their dependencies into containers."),
+    Document(page_content="FAISS is a library for efficient similarity search on dense vectors."),
+    Document(page_content="RAG stands for Retrieval Augmented Generation, combining search with LLMs."),
+]
+
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-vectorstore = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+vectorstore = FAISS.from_documents(docs, embeddings)
 retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 
 llm = ChatGroq(

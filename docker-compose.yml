@@ -1,0 +1,14 @@
+﻿services:
+  api:
+    image: rag-api
+    ports:
+      - "8000:8000"
+    environment:
+      - GROQ_API_KEY=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
+
+  ui:
+    image: streamlit-ui
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
