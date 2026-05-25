@@ -1,44 +1,71 @@
-\# MLOps Phase 5 — RAG API
+﻿# MLOps Phase 5 — Live ML Pipeline
 
+A production-grade MLOps pipeline built from scratch.
 
+## Live Demo
+- API: https://mlops-phase5.onrender.com
+- Docs: https://mlops-phase5.onrender.com/docs
 
-A live REST API built with FastAPI, Docker, and deployed on Render.
+## Architecture
+## What's Inside
 
+| File | Purpose |
+|------|---------|
+| app.py | FastAPI RAG app with Groq LLM |
+| pipeline.py | Full train → log → save → monitor pipeline |
+| monitor.py | Evidently drift detection |
+| generate_data.py | Reference + current dataset generator |
+| Dockerfile | Container config |
+| docker-compose.yml | API + Streamlit together |
+| .github/workflows/ci.yml | GitHub Actions CI pipeline |
+| model.pkl.dvc | DVC tracked model |
 
+## How to Run Locally
 
-\## Live Demo
+### 1. Install dependencies
+`ash
+pip install -r requirements.txt
+pip install evidently==0.4.30
+`
 
-\- API: https://mlops-phase5.onrender.com
+### 2. Generate data
+`ash
+python generate_data.py
+`
 
-\- Docs: https://mlops-phase5.onrender.com/docs
+### 3. Run full pipeline
+`ash
+python pipeline.py
+`
 
+### 4. View drift report
+`ash
+start monitoring_report.html
+`
 
+### 5. View MLflow UI
+`ash
+python -m mlflow ui
+`
+Open http://127.0.0.1:5000
 
-\## What it does
+### 6. Run API locally
+`ash
+uvicorn app:app --reload --port 10000
+`
 
-RAG (Retrieval Augmented Generation) pipeline that answers questions using an LLM backed by a document store.
+## Results
+- Model accuracy: 70%
+- Drift detected in 3/4 columns (query_length, response_time_ms, prediction)
+- CI pipeline: passing on every push to main
+- Live API: deployed on Render free tier
 
-
-
-\## Stack
-
-\- FastAPI + Uvicorn
-
-\- LangChain + Groq LLM
-
-\- Docker + Render (cloud deployment)
-
-\- MLflow (experiment tracking)
-
-\- DVC (data versioning)
-
-
-
-\## Run locally
-
-```bash
-
-docker-compose up
-
-```
-
+## Tech Stack
+- FastAPI + Uvicorn
+- MLflow 3.12
+- Evidently AI 0.4.30
+- DVC
+- Docker
+- GitHub Actions
+- Groq LLM (LLaMA3)
+- Render (deployment)
