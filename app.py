@@ -13,7 +13,6 @@ import mlflow
 
 app = FastAPI()
 
-# Sample documents to build index from
 docs = [
     Document(page_content="MLOps is the practice of deploying and maintaining ML models in production."),
     Document(page_content="FastAPI is a modern web framework for building APIs with Python."),
@@ -58,25 +57,29 @@ mlflow.set_experiment("rag-pipeline")
 def root():
     return {"status": "RAG API is running"}
 
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
 @app.post("/ask")
 def ask_question(request: QuestionRequest):
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
-
-    with mlflow.start_run():
-        # Log inputs
-        mlflow.log_param("model", "llama-3.3-70b-versatile")
-        mlflow.log_param("top_k", 3)
-        mlflow.log_param("embedding_model", "all-MiniLM-L6-v2")
-        mlflow.log_param("question", request.question)
-
-        # Measure latency
-        start = time.time()
+    
+    start = time.time()
+    
+    try:
+        with mlflow.start_run():
+            mlflow.log_param("model", "llama-3.3-70b-versatile")
+            mlflow.log_param("top_k", 3)
+            mlflow.log_param("embedding_model", "all-MiniLM-L6-v2")
+            mlflow.log_param("question", request.question)
+            answer = chain.invoke(request.question)
+            latency = time.time() - start
+            mlflow.log_metric("response_latency_sec", latency)
+            mlflow.log_metric("answer_length_chars", len(answer))
+    except Exception:
         answer = chain.invoke(request.question)
         latency = time.time() - start
-
-        # Log metrics
-        mlflow.log_metric("response_latency_sec", latency)
-        mlflow.log_metric("answer_length_chars", len(answer))
 
     return {"question": request.question, "answer": answer}
