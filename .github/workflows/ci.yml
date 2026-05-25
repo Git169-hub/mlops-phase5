@@ -10,6 +10,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    env:
+      GROQ_API_KEY: test-fake-key-for-ci
+
     steps:
     - uses: actions/checkout@v3
 
@@ -20,7 +23,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install fastapi uvicorn langchain langchain-groq langchain-core pydantic
+        pip install fastapi uvicorn langchain langchain-groq langchain-core pydantic httpx
 
     - name: Test app syntax
       run: |
@@ -28,14 +31,14 @@ jobs:
         echo "Syntax check passed"
 
     - name: Test health endpoint
+      env:
+        GROQ_API_KEY: test-fake-key-for-ci
       run: |
         python -c "
-        from app import app
         from fastapi.testclient import TestClient
-        import os
-        os.environ['GROQ_API_KEY'] = 'test-key'
+        from app import app
         client = TestClient(app)
         response = client.get('/health')
         assert response.status_code == 200
-        print('Health check passed')
+        print('Health check passed:', response.json())
         "
