@@ -1,29 +1,30 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_groq import ChatGroq
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.documents import Document
 import os
 import time
-import mlflow
 
 app = FastAPI()
 
+# Simple document store - no heavy ML model needed
 docs = [
-    Document(page_content="MLOps is the practice of deploying and maintaining ML models in production."),
-    Document(page_content="FastAPI is a modern web framework for building APIs with Python."),
-    Document(page_content="Docker packages applications and their dependencies into containers."),
-    Document(page_content="FAISS is a library for efficient similarity search on dense vectors."),
-    Document(page_content="RAG stands for Retrieval Augmented Generation, combining search with LLMs."),
+    "MLOps is the practice of deploying and maintaining ML models in production.",
+    "FastAPI is a modern web framework for building APIs with Python.",
+    "Docker packages applications and their dependencies into containers.",
+    "FAISS is a library for efficient similarity search on dense vectors.",
+    "RAG stands for Retrieval Augmented Generation, combining search with LLMs.",
 ]
 
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-vectorstore = FAISS.from_documents(docs, embeddings)
-retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+def simple_retrieve(question: str, k: int = 3):
+    question_words = question.lower().split()
+    scored = []
+    for doc in docs:
+        score = sum(1 for word in question_words if word in doc.lower())
+        scored.append((score, doc))
+    scored.sort(reverse=True)
+    return [doc for _, doc in scored[:k]]
+
+from langchain_groq import ChatGroq
+from langchain_core.prompts import ChatPromptTemplate
 
 llm = ChatGroq(
     model="llama-3.3-70b-versatile",
@@ -38,20 +39,8 @@ Context: {context}
 Question: {question}
 """)
 
-def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
-
-chain = (
-    {"context": retriever | format_docs, "question": RunnablePassthrough()}
-    | prompt
-    | llm
-    | StrOutputParser()
-)
-
 class QuestionRequest(BaseModel):
     question: str
-
-mlflow.set_experiment("rag-pipeline")
 
 @app.get("/")
 def root():
@@ -65,21 +54,15 @@ def health():
 def ask_question(request: QuestionRequest):
     if not request.question.strip():
         raise HTTPException(status_code=400, detail="Question cannot be empty")
-    
-    start = time.time()
-    
-    try:
-        with mlflow.start_run():
-            mlflow.log_param("model", "llama-3.3-70b-versatile")
-            mlflow.log_param("top_k", 3)
-            mlflow.log_param("embedding_model", "all-MiniLM-L6-v2")
-            mlflow.log_param("question", request.question)
-            answer = chain.invoke(request.question)
-            latency = time.time() - start
-            mlflow.log_metric("response_latency_sec", latency)
-            mlflow.log_metric("answer_length_chars", len(answer))
-    except Exception:
-        answer = chain.invoke(request.question)
-        latency = time.time() - start
 
-    return {"question": request.question, "answer": answer}
+    start = time.time()
+    context = "\n\n".join(simple_retrieve(request.question))
+    chain = prompt | llm
+    answer = chain.invoke({"context": context, "question": request.question})
+    latency = time.time() - start
+
+    return {
+        "question": request.question,
+        "answer": answer.content,
+        "latency_sec": round(latency, 2)
+    }

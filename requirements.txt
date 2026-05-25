@@ -3,7 +3,4 @@ uvicorn
 langchain
 langchain-community
 langchain-groq
-langchain-huggingface
-faiss-cpu
-sentence-transformers
-mlflow
+langchain-core
