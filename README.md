@@ -8,17 +8,20 @@ A production-grade MLOps pipeline built from scratch.
 
 ## Architecture
 ## What's Inside
+## Results
 
-| File | Purpose |
-|------|---------|
-| app.py | FastAPI RAG app with Groq LLM |
-| pipeline.py | Full train → log → save → monitor pipeline |
-| monitor.py | Evidently drift detection |
-| generate_data.py | Reference + current dataset generator |
-| Dockerfile | Container config |
-| docker-compose.yml | API + Streamlit together |
-| .github/workflows/ci.yml | GitHub Actions CI pipeline |
-| model.pkl.dvc | DVC tracked model |
+| What | Result |
+|---|---|
+| API response latency | ~1-2 sec (Groq inference) |
+| CI pipeline | Passing on every push to main |
+| Drift detected | 3/4 columns flagged by Evidently |
+| MLflow runs logged | 3 experiments tracked |
+| Deployment | Live on Render free tier |
+
+> Note: Model in pipeline.py is trained on synthetic data 
+> to demonstrate MLOps tooling — MLflow tracking, DVC versioning,
+> Evidently drift detection, Docker containerization, 
+> and GitHub Actions CI/CD.
 
 ## How to Run Locally
 
